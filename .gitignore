@@ -1,0 +1,13 @@
+__pycache__
+.gitignore
+__pycache__/**
+**.blend1
+makerelease.bat
+*.bat
+.vscode
+.vscode/**
+.p4config
+.p4ignore
+SetMapping/*
+*test*
+*Test*

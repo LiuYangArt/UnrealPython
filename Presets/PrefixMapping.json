@@ -1,0 +1,73 @@
+{
+    "Blueprint": "BP_",
+    "WidgetBlueprint": "WBP_",
+    "EditorUtilityWidgetBlueprint": "EUW_",
+    "BlueprintInterface": "BI_",
+    "CurveTable": "CT_",
+    "DataTable":"DT_",
+    "UserDefinedEnum": "E_",
+    "UserDefinedStruct": "F_",
+    "ActorComponent": "AC_",
+    
+    "AnimBlueprint": "ABP_",
+    "PhysicsAsset": "PHYS_",
+    "Physics Material": "PM_",
+    "MorphTarget": "MT_",
+    "PoseAsset": "PA_",
+    "BlendSpace": "BS_",
+    "GroomAsset": "GR_",
+
+    "StaticMesh": "SM_",
+    "SkeletalMesh": "SK_",
+
+    "Material": "M_",
+    "MaterialInstanceConstant": "MI_",
+    "MaterialFunction": "MF_",
+    "MaterialFunctionMaterialLayer": "ML_",
+    "MaterialFunctionMaterialLayerBlend": "MLB_",
+    "MaterialFunctionMaterialLayerBlendInstance": "MLBI_",
+    "MaterialFunctionMaterialLayerInstance": "MLI_",
+    "MaterialParameterCollection": "MPC_",
+    "SubsurfaceProfile": "SP_",
+
+    "PostProcessMaterial": "PP_",
+    
+    "Texture2D": "T_",
+    "TextureRenderTarget": "RT_",
+    "TextureCube": "HDR_",
+    "VolumeTexture": "T3D_",
+    "RuntimeVirtualTexture": "RVT_",
+    "MediaTexture": "MT_",
+
+    "World": "L_",
+    "LevelInstance": "LI_",
+    "LandscapeGrassType": "LG_",
+    "LandscapeLayerInfoObject": "LL_",
+    "FoliageType_": "FT_",
+
+    "LevelSequence": "LS_",
+    "CameraAnimationSequence": "CA_",
+
+    "InteractiveToolsPresetCollectionAsset": "TP_",
+    "ConsoleVariablesAsset": "CV_",
+    "OpenColorIOConfiguration": "OCIO_",
+
+    "Font": "Font_",
+    "SlateBrushAsset": "Brush_",
+    "SlateVectorArtData": "Vector_",
+    "SlateWidgetStyleAsset": "Style_",
+
+    "SoundCue": "SC_",
+    "SoundWave": "S_",
+
+    "NiagaraEmitter": "FXE_",
+    "NiagaraSystem": "FXS_",
+    "ParticleSystem": "PS_",
+    "NiagaraScript": "NS_",
+    "NiagaraEffectType": "NET_",
+    "NiagaraParameterCollection": "NPC_",
+    "NiagaraParameterCollectionInstance": "NPCI_",
+    "NiagaraParameterDefinitions": "NPD_"
+
+}
+
