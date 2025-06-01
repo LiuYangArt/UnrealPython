@@ -6,8 +6,8 @@ from CommonFunctions import *
 BASE_COLLISION: unreal.Name = unreal.Name("CamToHiddenMesh") # "CamToHiddenMesh"可以实现相机穿透功能，使用Actor Tag"Camera_NoHide" 屏蔽
 DECAL_COLLISION: unreal.Name = unreal.Name("NoCollision")
 
-sys_lib = unreal.SystemLibrary()
-string_lib = unreal.StringLibrary()
+sys_lib = unreal.SystemLibrary
+string_lib = unreal.StringLibrary
 bp_editor_lib = unreal.BlueprintEditorLibrary
 
 staticmesh_subsys = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
