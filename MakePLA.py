@@ -1,4 +1,5 @@
 import unreal
+import re
 bp_editor_lib = unreal.BlueprintEditorLibrary
 asset_lib=unreal.EditorAssetLibrary
 editor_util = unreal.EditorUtilityLibrary
@@ -23,7 +24,7 @@ def get_blueprint_class(path: str) -> unreal.Class:
 
         return blueprint_class
 
-def get_level_instance_from_pla(target_actor):
+def get_level_instance_from_pla(target_actor:unreal.PackedLevelActor):
     """
     对于在关卡中选中的Packed Level Actor，找到对应的Level Instance
     """
@@ -49,7 +50,7 @@ def get_level_instance_from_pla(target_actor):
 
 
 
-def replace_pla_with_level_instance(target_actor):
+def replace_pla_with_level_instance(target_actor:unreal.PackedLevelActor):
     """
     将关卡中的Packed Level Actor替换为对应的Level Instance
     """
@@ -69,7 +70,7 @@ def replace_pla_with_level_instance(target_actor):
                 
 
 # selected_assets = unreal.EditorUtilityLibrary.get_selected_assets()
-def create_pla_from_level_instance(target_asset):
+def create_pla_from_level_instance(target_asset:unreal.PackedLevelActor):
     """ 从Level Instance创建新的PLA """
     # 检查asset是否为Level Instance类型
     if not target_asset.get_class().get_name().endswith("World"):
@@ -91,9 +92,10 @@ def create_pla_from_level_instance(target_asset):
     blueprint = asset_tools.create_asset(target_name, target_dir, None, factory)
     bp_actor = get_default_object(blueprint)
     bp_editor_lib.set_editor_property(bp_actor, name="WorldAsset", value=target_asset)
+    unreal.BlueprintEditorLibrary.compile_blueprint(blueprint)
     return bp_actor
 
-def copy_asset_to_dir(asset, target_dir):
+def copy_asset_to_dir(asset, target_dir:str):
     """
     复制目标asset到指定的新路径，返回新asset的路径
     """
@@ -101,84 +103,99 @@ def copy_asset_to_dir(asset, target_dir):
     asset_name = asset.get_name()
     target_dir = unreal.Paths.normalize_directory_name(target_dir)
     new_asset_path = f"{target_dir}/{asset_name}"
+    new_asset_path=check_file_exist(new_asset_path)
     print(f"copy {asset_path} to {new_asset_path}")
     duplicated_asset = asset_lib.duplicate_asset(asset_path, new_asset_path)
     if duplicated_asset:
         new_asset = duplicated_asset
         unreal.log(f"Asset {asset_name} copied to {new_asset.get_path_name()}")
-        return new_asset.get_path_name()
+        return new_asset
     else:
         unreal.log_warning(f"Failed to copy asset {asset_name} to {target_dir}")
         return None
 
 
+def check_file_exist(file_path: str) -> str:
+    """ 检查文件是否存在，并根据已有文件名生成新文件名（递归检查直到不存在为止） """
+    while asset_lib.does_asset_exist(file_path):
+        # 拆分路径和文件名
+        dir_path = unreal.Paths.get_path(file_path)
+        base_name = unreal.Paths.get_base_filename(file_path)
+        ext = unreal.Paths.get_extension(file_path)
+        # 匹配结尾数字
+        match = re.match(r"^(.*?)(\d+)$", base_name)
+        if match:
+            name_part = match.group(1)
+            num_part_str = match.group(2)
+            num_part = int(num_part_str) + 1
+            # 保持原有数字的位数
+            new_num_part = str(num_part).zfill(len(num_part_str))
+            new_base_name = f"{name_part}{new_num_part}"
+        else:
+            new_base_name = f"{base_name}1"
+        # 重新组装路径
+        if ext:
+            file_path = f"{dir_path}/{new_base_name}.{ext}"
+        else:
+            file_path = f"{dir_path}/{new_base_name}"
+    return file_path
 
 # 在UE WidgetBP中调用以下Functions
-
-def duplicate_pla_actors(target_actors, target_dir) -> list:
-    """
-    复制关卡中选中的PLA到目标路径
-
-    Parameters:
-    - target_actors (list): A list of PLA actors to duplicate.
-    - target_dir (str): The directory to copy the assets to.
-
-    Returns:
-    - list: A list of paths to the copied assets.
-    """
-
-
-    #TODO：添加slow task
-    count=0
-    for actor in target_actors:
-        level_instance = get_level_instance_from_pla(actor)
-        if level_instance:
-            new_level_instance=copy_asset_to_dir(level_instance, target_dir)
-            create_pla_from_level_instance(new_level_instance)
-            count+=1
-
-    unreal.log_("成功复制了" + str(count) + "个PLA资产")
-
-def duplicate_pla_assets(assets,target_dir):
-    """复制ContentBrowser中选中的PLA资产"""
+def duplicate_packed_level_actors(targets,target_dir:str,type="EDITOR"):
+    """复制ContentBrowser中选中的PLA资产 target_dir=项目内目标路径 type='EDITOR" 或 'CONTENTBROWSER' """
     level_instances=[]
     count=0
-    for asset in assets:
-        is_level_instance = False
-        #检查类型， 是pla还是level instance， 如果是level instance， 直接复制， 如果是pla， 先从pla得到对应的level instance
-        if asset.get_class().get_name().endswith("World"):
-            is_level_instance = True
-            level_instance=asset
-        else:
-            if asset.get_class().get_name() == "Blueprint":
-                #检查parent class 的类型
-                bp=get_default_object(asset)
-                if isinstance(bp,unreal.PackedLevelActor):
-                    level_instance=get_level_instance_from_pla(asset)
-        
-        if level_instance is not None:
-            if level_instance not in level_instances:
-                level_instances.append(level_instance)
-    if len(level_instances) > 0:
-        for instance in level_instances:
-            new_level_instance=copy_asset_to_dir(level_instance, target_dir)
-            create_pla_from_level_instance(new_level_instance)
-            count+=1
+    if type=="EDITOR":
+        target_actors=targets
+        for actor in target_actors:
+            #检查是否是Level Instance
+            if actor.get_class().get_name()=="LevelInstance":
+                level_instance=actor.get_world_asset()
+            else:
+                level_instance = get_level_instance_from_pla(actor)
+            if level_instance is not None:
+                if level_instance not in level_instances:
+                    level_instances.append(level_instance)
 
+    elif type=="CONTENTBROWSER":
+        target_assets=targets
+        for asset in target_assets:
+            if asset.get_class().get_name().endswith("World"):
+                level_instance=asset
+            else:
+                if asset.get_class().get_name() == "Blueprint":
+                    #检查parent class 的类型
+                    bp=get_default_object(asset)
+                    if isinstance(bp,unreal.PackedLevelActor):
+                        level_instance=get_level_instance_from_pla(asset)
+            if level_instance is not None:
+                if level_instance not in level_instances:
+                    level_instances.append(level_instance)
+
+    if len(level_instances) > 0:
+        asset_count = len(level_instances)
+        task_name = "Dulpicating Packed Level Actors"
+    
+        with unreal.ScopedSlowTask(asset_count, task_name) as slowTask:
+            slowTask.make_dialog(True)
+            for instance in level_instances:
+                new_level_instance=copy_asset_to_dir(instance, target_dir)
+                print(new_level_instance)
+                create_pla_from_level_instance(new_level_instance)
+                count+=1
 
 def batch_replace_pla_to_level_instance(actors):
-    """批量将PLA资产转为LevelInstance资产"""
+    """批量将关卡中的PLA转为LevelInstance"""
     count = 0
     for actor in actors:
         new_actor=replace_pla_with_level_instance(actor)
         if new_actor:
             count+=1
-    unreal.log_("成功替换了" + str(count) + "个Packed Level Actors为LevelInstance资产")
+    unreal.log("成功替换了" + str(count) + "个Packed Level Actors为LevelInstance资产")
 
 
 
 #Test Function
-duplicate_pla_assets(selected_assets)
-# get_level_instance_from_pla(selected_actors[0])
-# replace_pla_with_level_instance(selected_actors[0])
-# copy_asset_to_dir(selected_assets[0], "/Game/Blueprints/")
+# duplicate_packed_level_actors(targets=selected_actors,target_dir="/Game/Blueprints/",type="EDITOR")
+
+# batch_replace_pla_to_level_instance(selected_actors)
