@@ -8,6 +8,14 @@ actor_subsys = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
 selected_actors = actor_subsys.get_selected_level_actors()
 selected_assets = editor_util.get_selected_assets()
+
+def get_default_object(asset) -> unreal.Object:
+
+    bp_gen_class = unreal.load_object(None, asset.generated_class().get_path_name())
+
+    default_object = unreal.get_default_object(bp_gen_class)
+
+    return default_object
 def get_default_object(asset) -> unreal.Object:
 
     bp_gen_class = unreal.load_object(None, asset.generated_class().get_path_name())
@@ -104,7 +112,6 @@ def copy_asset_to_dir(asset, target_dir:str):
     target_dir = unreal.Paths.normalize_directory_name(target_dir)
     new_asset_path = f"{target_dir}/{asset_name}"
     new_asset_path=check_file_exist(new_asset_path)
-    print(f"copy {asset_path} to {new_asset_path}")
     duplicated_asset = asset_lib.duplicate_asset(asset_path, new_asset_path)
     if duplicated_asset:
         new_asset = duplicated_asset
@@ -180,9 +187,9 @@ def duplicate_packed_level_actors(targets,target_dir:str,type="EDITOR"):
             slowTask.make_dialog(True)
             for instance in level_instances:
                 new_level_instance=copy_asset_to_dir(instance, target_dir)
-                print(new_level_instance)
                 create_pla_from_level_instance(new_level_instance)
                 count+=1
+    unreal.log(f"已创建{count}个PLA")
 
 def batch_replace_pla_to_level_instance(actors):
     """批量将关卡中的PLA转为LevelInstance"""
