@@ -560,8 +560,3 @@ def batch_recompile_bps(assets):
     for bp in blueprints:
         bp_editor_lib.compile_blueprint(bp)
 
-# testrun
-
-# SWATCH_PARENT = "/Game/FDBattleEnvContent/prefab/Functions/BP_SwatchParent.BP_SwatchParent"
-# reparent_blueprint_assets(selectedAssets,SWATCH_PARENT)
-# fix_prefab_assets(selectedAssets)

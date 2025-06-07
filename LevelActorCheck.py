@@ -245,6 +245,3 @@ def check_level_actors(actors, add_layer=True, add_folder=False):
     Log.write_log(check_log)
 
 
-#测试功能
-
-check_level_actors(actors=all_level_actors,add_layer=False,add_folder=False)

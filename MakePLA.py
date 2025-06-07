@@ -109,6 +109,8 @@ def copy_asset_to_dir(asset, target_dir:str):
     """
     asset_path = asset.get_path_name()
     asset_name = asset.get_name()
+    # 清理路径字符串中的空格和不合法字符，只保留字母、数字、下划线、斜杠
+    target_dir = re.sub(r'[^a-zA-Z0-9_\/]', '', target_dir.replace(' ', ''))
     target_dir = unreal.Paths.normalize_directory_name(target_dir)
     new_asset_path = f"{target_dir}/{asset_name}"
     new_asset_path=check_file_exist(new_asset_path)

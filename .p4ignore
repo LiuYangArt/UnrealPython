@@ -2,3 +2,9 @@
 *Test*
 *.bat
 SetMapping/*
+__pycache__/**
+.clinerules/**
+.windsurf/**
+.cursor/**
+memory-bank/**
+_old/**

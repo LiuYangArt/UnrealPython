@@ -69,13 +69,6 @@ def check_bp_event_tick(actors):
     current_step = 0
 
 
-    # blueprints=get_blueprint_assets(actors)
-    # print(blueprints)
-    # for blueprint in blueprints:
-    #     components = get_blueprint_components(blueprint)
-    #     print(blueprint)
-    #     print(components)
-    #     print("hi")
 
 
 
@@ -113,6 +106,3 @@ def check_level_actors_event_tick(actors):
 
 
 
-#测试功能
-
-check_level_actors_event_tick(actors=all_level_actors)

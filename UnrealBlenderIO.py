@@ -3,6 +3,9 @@ import os
 import json
 #constants
 DEFAULT_IO_TEMP_DIR = r"C:\Temp\UBIO"
+BL_FLAG = "Blender"
+BL_NEW = "NewActor"
+BL_DEL = "Removed"
 
 editor_subsys= unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 level_subsys = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
@@ -400,13 +403,18 @@ def import_json(file_path):
     # print(fname_to_actor)
 
     # 4. 遍历JSON中的actors
-    actors_data = json_data.get("actors", [])
-    for actor_info in actors_data:
+    json_actors_data = json_data.get("actors", [])
+    # 先遍历一遍，收集需要处理的对象到不同列表
+    bl_new_list = []   # 存储需要新建的actor信息
+    bl_del_list = []   # 存储需要删除的actor信息
+    other_ops = []     # 存储其他需要同步transform的actor信息
+
+    for actor_info in json_actors_data:
         guid = actor_info.get("fguid")
         name = actor_info.get("name")
         fname = actor_info.get("fname")
         actor_type = actor_info.get("actor_type")
-        blender_flag = actor_info.get("Blender", None)
+        blender_flag = actor_info.get(BL_FLAG, None)
         if "Light" in actor_type:  # 忽略灯光
             continue
         transform_data = actor_info.get("transform", {})
@@ -414,22 +422,88 @@ def import_json(file_path):
         rotation = transform_data.get("rotation", {})
         scale = transform_data.get("scale", {})
 
-        # 检查是否已存在
-        # 同时检查 fname 和 name 是否存在于映射
+        # 分类收集BL_NEW、BL_DEL和其他操作
+        if blender_flag == BL_NEW:
+            bl_new_list.append((actor_info, location, rotation, scale))
+        elif blender_flag == BL_DEL:
+            bl_del_list.append((actor_info, actor_type, name))
+        else:
+            other_ops.append((actor_info, location, rotation, scale))
+
+    # 先统一处理所有BL_NEW，避免被提前删除
+    for actor_info, location, rotation, scale in bl_new_list:
+        name = actor_info.get("name")
+        fname = actor_info.get("fname")
+        actor_type = actor_info.get("actor_type")
+        name_exists = False
+        same_type = False
+        # 检查场景中是否有同名actor
+        for a in fname_to_actor.values():
+            if a.get_actor_label() == name:
+                name_exists = True
+                a_type = get_actor_type(a, a.get_class().get_name())
+                if a_type == actor_type:
+                    same_type = True
+                    # 只修改transform
+                    new_transform = unreal.Transform(
+                        unreal.Vector(location.get("x", 0), location.get("y", 0), location.get("z", 0)),
+                        unreal.Rotator(rotation.get("x", 0), rotation.get("y", 0), rotation.get("z", 0)),
+                        unreal.Vector(scale.get("x", 1), scale.get("y", 1), scale.get("z", 1))
+                    )
+                    a.set_actor_transform(new_transform, sweep=False, teleport=True)
+                    unreal.log(f"已更新同名Actor: {name} 的Transform")
+                    break
+        # 如果是新Actor且没有找到同名同类型的actor
+        if not name_exists or not same_type:
+            # fname找原资源并复制
+            src_actor = None
+            for a in fname_to_actor.values():
+                if str(a.get_fname()) == fname:
+                    src_actor = a
+                    break
+            if src_actor:
+                # 复制actor
+                new_actor = actor_subsys.duplicate_actor(src_actor)
+                if new_actor:
+                    new_actor.set_actor_label(name)
+                    new_transform = unreal.Transform(
+                        unreal.Vector(location.get("x", 0), location.get("y", 0), location.get("z", 0)),
+                        unreal.Rotator(rotation.get("x", 0), rotation.get("y", 0), rotation.get("z", 0)),
+                        unreal.Vector(scale.get("x", 1), scale.get("y", 1), scale.get("z", 1))
+                    )
+                    new_actor.set_actor_transform(new_transform, sweep=False, teleport=True)
+                    unreal.log(f"已新增Blender新Actor: {name} 并设置Transform")
+                else:
+                    unreal.log_error(f"无法复制原Actor: {name}")
+            else:
+                unreal.log_error(f"找不到原资源Actor用于复制: {name}")
+
+    # 再统一处理所有BL_DEL，确保不会提前删除新建目标
+    for actor_info, actor_type, name in bl_del_list:
+        # 检查场景中是否有同名actor且类型一致
+        for a in fname_to_actor.values():
+            if a.get_actor_label() == name:
+                a_type = get_actor_type(a, a.get_class().get_name())
+                if a_type == actor_type:
+                    # 找到匹配的actor，删除它
+                    unreal.log(f"删除Actor: {name} (类型: {actor_type})")
+                    a.destroy_actor()
+                    break
+
+    # 最后处理其他操作（如transform同步）
+    for actor_info, location, rotation, scale in other_ops:
+        name = actor_info.get("name")
+        fname = actor_info.get("fname")
+        actor_type = actor_info.get("actor_type")
         actor = None
         # 只有当 fname 和 name 都匹配时才认为是同一个 actor
         if fname in fname_to_actor:
             candidate = fname_to_actor[fname]
             if candidate.get_actor_label() == name:
                 actor = candidate
-                # unreal.log(f"找到匹配的actor: {actor.get_actor_label()}")
-
         if actor:
             # 检查transform是否一致
-
-
             if not is_transform_close(actor, location, rotation, scale):
-                # 更新transform
                 new_transform = unreal.Transform(
                     unreal.Vector(location.get("x", 0), location.get("y", 0), location.get("z", 0)),
                     unreal.Rotator(rotation.get("x", 0), rotation.get("y", 0), rotation.get("z", 0)),
@@ -437,54 +511,8 @@ def import_json(file_path):
                 )
                 actor.set_actor_transform(new_transform, sweep=False, teleport=True)
                 unreal.log(f"已更新Actor: {name} 的Transform")
-        else:
-            # 针对Blender新加的Actor
-            if blender_flag == "NewActor":
-                # 检查场景中是否有同名actor
-                name_exists = False
-                same_type = False
-                for a in fname_to_actor.values():
-                    if a.get_actor_label() == name:
-                        name_exists = True
-                        a_type = get_actor_type(a, a.get_class().get_name())
-                        if a_type == actor_type:
-                            same_type = True
-                            # 只修改transform
-                            new_transform = unreal.Transform(
-                                unreal.Vector(location.get("x", 0), location.get("y", 0), location.get("z", 0)),
-                                unreal.Rotator(rotation.get("x", 0), rotation.get("y", 0), rotation.get("z", 0)),
-                                unreal.Vector(scale.get("x", 1), scale.get("y", 1), scale.get("z", 1))
-                            )
-                            a.set_actor_transform(new_transform, sweep=False, teleport=True)
-                            unreal.log(f"已更新同名Actor: {name} 的Transform")
-                        break
-                if not name_exists or not same_type:
-                    # fname找原资源并复制
-                    src_actor = None
-                    for a in fname_to_actor.values():
-                        if str(a.get_fname()) == fname:
-                            src_actor = a
-                            break
-                    if src_actor:
-                        # 复制actor
-                        new_actor = actor_subsys.duplicate_actor(src_actor)
-                        if new_actor:
-                            new_actor.set_actor_label(name)
-                            new_transform = unreal.Transform(
-                                unreal.Vector(location.get("x", 0), location.get("y", 0), location.get("z", 0)),
-                                unreal.Rotator(rotation.get("x", 0), rotation.get("y", 0), rotation.get("z", 0)),
-                                unreal.Vector(scale.get("x", 1), scale.get("y", 1), scale.get("z", 1))
-                            )
-                            new_actor.set_actor_transform(new_transform, sweep=False, teleport=True)
-                            unreal.log(f"已新增Blender新Actor: {name} 并设置Transform")
-                        else:
-                            unreal.log_error(f"无法复制原Actor: {name}")
-                    else:
-                        unreal.log_error(f"找不到原资源Actor用于复制: {name}")
-
-
+    # unreal.EditorLevelLibrary.editor_screen_refresh()
     unreal.log("关卡数据导入完成。")
-
     return
     
 
@@ -508,6 +536,6 @@ def ubio_import():
     level_name_for_file = unreal.SystemLibrary.get_object_name(level_asset).replace(" ", "_")
     json_path=DEFAULT_IO_TEMP_DIR+"\\"+level_name_for_file+".json"
     print(f"从{json_path}导入")
-    import_json(json_path)
+    import_json(json_path) 
 # ubio_import()
 

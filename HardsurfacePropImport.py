@@ -123,16 +123,7 @@ def list_import_files(file_dir):
 
 
 
-# def check_subfolder(file_path,mesh_dir):
-#     mesh_dir = mesh_dir + "/"
-#     subfolder = ""
-#     file_dir=file_path.split(mesh_dir)
-#     if len(file_dir)>1:
-#         if "/" in file_dir[1]:
-#             file_dir=string_lib.split(file_dir[1],"/",search_dir=unreal.SearchDir.FROM_END)[0]
-#             subfolder="/"+file_dir
 
-#     return subfolder
 
 def batch_import_hs_props(file_dir,target_dir,mesh_dir="/Meshes"):
     if file_dir=="":
@@ -172,24 +163,4 @@ def batch_import_hs_props(file_dir,target_dir,mesh_dir="/Meshes"):
     
     unreal.log("DONE")
     return
-
-# def answer_to_bl(var1,var2,var3):
-#     print(var1,var2,var3)
-#     print("DONE")
-#     return
-
-# # a="C:/Users/LiuYang/AppData/Local/Temp/BlenderHST/SM_A1a1.fbx"
-# # b=check_subfolder(a,MESH_DIR)
-# # print(b)
-# # if b is not None and b != "":
-# #     print("has subfolder")
-# # else:
-# #     print("no subfolder")
-
-# ###====================test=====================
-
-# file_dir = "D:\OneDrive\Desktop\Export_Test\Meshes"
-# target_dir = "/Game/Developers/LiuYang/ImportTest/"
-
-# batch_import_hs_props(file_dir,target_dir,mesh_dir="/Meshes")
 
